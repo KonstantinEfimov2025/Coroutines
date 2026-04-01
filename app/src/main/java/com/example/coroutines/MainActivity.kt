@@ -50,13 +50,18 @@ class MainActivity : AppCompatActivity() {
             return@async "Finished Coroutine $tasknumber"
         }
 
-    // Функция запуска корутин
+
     fun launchCoroutines(statusText: TextView) {
         (1..count).forEach {
             statusText.text = "Started Coroutine $it"
+
+            android.util.Log.d("COROUTINE_DEBUG", "Запущена корутина №$it")
+
             coroutineScope.launch(Dispatchers.Main) {
-                // Ждем результат выполнения задачи и выводим его
-                statusText.text = performTask(it).await()
+                val result = performTask(it).await()
+                statusText.text = result
+
+                android.util.Log.d("COROUTINE_DEBUG", "--- ЗАВЕРШИЛАСЬ корутина №$it")
             }
         }
     }
