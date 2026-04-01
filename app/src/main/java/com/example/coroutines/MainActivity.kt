@@ -1,47 +1,63 @@
 package com.example.coroutines
 
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.coroutines.ui.theme.CoroutinesTheme
+import android.widget.Button
+import android.widget.SeekBar
+import android.widget.TextView
+import kotlinx.coroutines.*
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+
+    private var count: Int = 1
+    // Создаем область видимости для корутин на главном потоке
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Принудительно устанавливаем совместимую тему прямо в коде,
+        // чтобы приложение точно не падало из-за стилей
+        setTheme(androidx.appcompat.R.style.Theme_AppCompat_Light_DarkActionBar)
+
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            CoroutinesTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+        setContentView(R.layout.activity_main)
+
+        // Находим элементы интерфейса старым добрым способом
+        val countText = findViewById<TextView>(R.id.countText)
+        val seekBar = findViewById<SeekBar>(R.id.seekBar)
+        val statusText = findViewById<TextView>(R.id.statusText)
+        val button = findViewById<Button>(R.id.button)
+
+        // Слушатель для ползунка
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seek: SeekBar, progress: Int, fromUser: Boolean) {
+                count = if (progress == 0) 1 else progress
+                countText.text = "$count coroutines"
             }
+            override fun onStartTrackingTouch(seek: SeekBar) {}
+            override fun onStopTrackingTouch(seek: SeekBar) {}
+        })
+
+        // Слушатель для кнопки
+        button.setOnClickListener {
+            launchCoroutines(statusText)
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    // Приостанавливаемая функция (задача), которая "спит" 5 секунд
+    suspend fun performTask(tasknumber: Int): Deferred<String> =
+        coroutineScope.async(Dispatchers.Main) {
+            delay(5000) // Имитация долгой работы
+            return@async "Finished Coroutine $tasknumber"
+        }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CoroutinesTheme {
-        Greeting("Android")
+    // Функция запуска корутин
+    fun launchCoroutines(statusText: TextView) {
+        (1..count).forEach {
+            statusText.text = "Started Coroutine $it"
+            coroutineScope.launch(Dispatchers.Main) {
+                // Ждем результат выполнения задачи и выводим его
+                statusText.text = performTask(it).await()
+            }
+        }
     }
 }
